@@ -202,7 +202,7 @@ public class Client
 	public Client() throws SocketException, UnknownHostException 
 	{
 		socket = new DatagramSocket();
-		address = InetAddress.getByName("localhost");
+		address = InetAddress.getByName("Eden_Trilogy");
 	}
 
 	/**

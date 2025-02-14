@@ -1,15 +1,11 @@
 package main.java;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-//import java.io.InterruptedIOException;
-//import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-//import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -24,22 +20,16 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.security.SignatureException;
-//import java.security.interfaces.ECPublicKey;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.crypto.Cipher;
-//import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.swing.plaf.basic.BasicSplitPaneUI.KeyboardUpLeftHandler;
 
 /**
  * This is the client program
@@ -57,35 +47,33 @@ public class Client
 	private static long encryptionCount = 0;
 	private static long decryptionCount = 0;
 	private static long numberOfMessagesSent = 0;
-	
 	private static String encryptedMessage = "message";
 	private static byte[] initVector;
 	private static SecretKey key = null;
-	private static String cipherBlockChainKey;// = "masterkey694";
-	//private final static int KEY_SIZE = 128;
+	private static String cipherBlockChainKey;
 	private final static int DATA_LENGTH = 128;
 	private static int privateValue; //a and b
 	private static int symmetricKey;
 	private static Cipher encryptionCipher = null;
-	private static byte[] HMAC_KEY;// = { 0x60, 0x51, 0x41, 0x30, 0x20, 0x11, 0x04, 0x70 }; //pre-shared between clients
-//	private AuthenticatorNode authenticator = null;
+	private static byte[] HMAC_KEY;
 	private static PrivateKey privateKeyDS = null; //private/public keys used to sign/authenticate with DSA
 	private static KeyPairGenerator keyPairGen = null; //key pair generator object
 	private static KeyPair pair = null;
 	private static Signature digitalSignature = null;
-	private static boolean logingIn;
-	private static boolean buyingStock;
-	private static boolean sellingStock = false;
-	private static File stocksDB = new File("C:\\Users\\betoc\\eclipse-workspace\\UdpBroker\\src\\main\\java\\stocks.txt"); //("C:\\Apps\\Eclipse_Neon\\Workspace\\Networking\\src\\stocks.txt");
 	public static PublicKey publicKeyDS = null;
 	public static 	byte[] hmacSignature;
 	public static byte[] messageDigitalSignature = null;
 	public static String clientName = "User";
 	public static boolean newMessage = false;
-	public static int P; //publicly available 
-	public static int G;
+	public static int P; //for DH key exchange
+	public static int G; //for DH key exchange
 	public static int publicValue;
-
+		
+	/**
+	 * Client program's entry point. Infinitely loops listening to user commands and broker responses, decrypts/encrypts and processes them
+	 * @throws Exception
+	 */
+	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws Exception 
 	{
 		Client client = new Client();
@@ -101,9 +89,6 @@ public class Client
 		client.sendMessage(Integer.toString(P));
 		client.sendMessage(Integer.toString(G));
 		
-//		System.out.println("P value: " + P);
-//		System.out.println("G value: " + G);
-		
 		//generate different keys for the different algorithms
 		for(int i = 0; i < 3; ++i)
 		{
@@ -111,9 +96,7 @@ public class Client
 			setPublicValue();
 			
 			//exchange public values
-//			System.out.println("sending public value to broker: " + publicValue);
 			publicValue = Integer.parseInt(client.sendMessage(Integer.toString(publicValue)));
-//			System.out.println("public value received from broker: " + publicValue);
 			
 			setSymmetricKey();
 			
@@ -149,7 +132,6 @@ public class Client
 
 			//converting public key to byte            
 			byte[] byte_pubkey = publicKeyDS.getEncoded();
-//			System.out.println("\nBYTE KEY::: " + byte_pubkey);
 
 			//converting byte to String 
 			String str_publicKeyDS = Base64.getEncoder().encodeToString(byte_pubkey);
@@ -157,24 +139,9 @@ public class Client
 			String str_hmacSignature = Base64.getEncoder().encodeToString(hmacSignature);
 			String initializationVector = Base64.getEncoder().encodeToString(encryptionCipher.getIV());
 			System.out.println("Sending IV to broker: " + initializationVector);
-			// String str_key = new String(byte_pubkey, Charset.);
-//			System.out.println("\nSTRING KEY::" + str_key);
-
 			
 			//send and receives a packet
 			response = sendMessage(encryptedMessage + "|" + clientName + "|" + str_hmacSignature + "|" + str_messageDS + "|" + str_publicKeyDS + "|" + initializationVector);
-			
-//			breakdown response
-//			String encryptedResponse = response.split("|")[0];
-//			String brokerName = response.split("|")[1];
-//			byte[] brokerHMACSignature = response.split("|")[2].getBytes();
-//			byte[] brokerDigitalSignature = response.split("|")[3].getBytes();
-//			
-//			KeyFactory factory = KeyFactory.getInstance("DSA", "BC");
-//			PublicKey brokerPublicKeyDS = (ECPublicKey) factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(response.split("|")[4])));
-//			
-//			//process response
-//			ProcessResponse(encryptedResponse, brokerName, brokerHMACSignature, brokerDigitalSignature, brokerPublicKeyDS);
 			
 			//breakdown response
 			String encryptedResponse = response.split("\\|")[0];
@@ -183,26 +150,26 @@ public class Client
 			byte[] userDigitalSignature = Base64.getDecoder().decode(response.split("\\|")[3].getBytes());
 			System.out.println("received iv string: " + response.split("\\|")[5].trim());
 			initVector = Base64.getDecoder().decode(response.split("\\|")[5].trim().getBytes());
-//			System.out.println(clientName + " received encrypted message: " + encryptedResponse);
 			System.out.println(clientName + " received HMAC signature: " + response.split("\\|")[2]);
 			System.out.println(clientName + " received DS signature: " + response.split("\\|")[3]);
 			
 			KeyFactory factory = KeyFactory.getInstance("DSA");
 			String keyString = response.split("\\|")[4].trim();
-//			System.out.println("####################################################" + keyString);
 			byte[] keyByte = Base64.getDecoder().decode(keyString.trim());
 			PublicKey brokerPublicKeyDS = (PublicKey) factory.generatePublic(new X509EncodedKeySpec(keyByte));
 			
 			//process response
 			ProcessResponse(encryptedResponse, senderName, userHMACSignature, userDigitalSignature, brokerPublicKeyDS);
 		}
-
+		
+		socket.close();
 	}
 
+	//constructor sets the datagram socket and address to connect to broker's host on any network
 	public Client() throws SocketException, UnknownHostException 
 	{
 		socket = new DatagramSocket();
-		address = InetAddress.getByName("Eden_Trilogy");
+		address = InetAddress.getByName("Eden_Trilogy"); //the broker's host machine name to be found on any network
 	}
 
 	/**
@@ -214,8 +181,6 @@ public class Client
 	public static String sendMessage(String msg) throws IOException 
 	{
 		buf = msg.getBytes();
-//		int bufferLength = buf.length;
-//		System.out.println("client length" + bufferLength);
 		DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
 		System.out.println("Sending packet of size: " + packet.getLength());
 		averagePacketSentSize += packet.getLength();
@@ -239,15 +204,14 @@ public class Client
 		System.out.println("Receiving packet of size: " + packet.getLength());
 		averagePacketReceivedSize += packet.getLength();
 		System.out.println("Average size of packets received: " + averagePacketReceivedSize);
-//		System.out.println("Received from Broker: " + received.split("\\|")[0]);
 		return received;
 	}
-
-	public void close() 
-	{
-		socket.close();
-	}
 	
+	/**
+	 * Generates the client's digital signature to be attached to every message
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidKeyException
+	 */
 	private static void GenerateDigitalSignature() throws NoSuchAlgorithmException, InvalidKeyException
 	{
 		keyPairGen = KeyPairGenerator.getInstance("DSA"); //Creating KeyPair generator object
@@ -259,6 +223,13 @@ public class Client
 		digitalSignature.initSign(privateKeyDS); //Initialize the signature
 	}
 
+	/**
+	 * Verifies the digital signature of the received message.
+	 * @param input - the input message in bytes
+	 * @param signatureToVerify - the broker's signature to verify
+	 * @param key - the public key used
+	 * @throws IOException
+	 */
 	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key) throws Exception
 	{ 
 		Signature signature = Signature.getInstance("SHA256withDSA"); 
@@ -266,11 +237,6 @@ public class Client
 		signature.update(input); 
 		return signature.verify(signatureToVerify); 
 	} 
-
-//	public void setAuthenticator(AuthenticatorNode auth)
-//	{
-//		this.authenticator = auth;
-//	}
 
 	/**
 	 * Sets the value of P and G used to compute the public value.
@@ -284,38 +250,53 @@ public class Client
 		G = g;
 	}
 
+	/**
+	 * Randomly generates the private value between 2 and 257.
+	 */
 	public static void setPrivateValue() 
 	{
 		privateValue = ThreadLocalRandom.current().nextInt(2,257); //private value used in DH
 	}
 
+	/**
+	 * Sets the cypher block key used for CCMP encryption.
+	 */
 	public static void setCipherBlockKey()
 	{
 		cipherBlockChainKey = Integer.toString(symmetricKey);
 	}
 
+	/**
+	 * Sets the hmac key used to produce the hmac signature.
+	 */
 	public static void setHMACKey()
 	{
 		HMAC_KEY = ByteBuffer.allocate(8).putInt(symmetricKey).array();
 	}
 
+	/**
+	 *Sets the public value shared with the client based on the values of P and G.
+	 */
 	public static void setPublicValue()
 	{
 		publicValue = calculateValue(G, privateValue, P); //public value used in DH
 	}
 
-	//	public int getPublicValue()
-	//	{
-	//		return publicValue;
-	//	}
-
+	/**
+	 * Sets the symmetric keys obtained via DH exchange that will be secret between the
+	 * client and the broker.
+	 */
 	public static void setSymmetricKey()
 	{
 		symmetricKey = calculateValue(publicValue, privateValue, P);//DH key exchange
-//		System.out.println("sym key = " + symmetricKey);
 	}
-
-	//method to find the value of G ^ a mod P  (DH key exchange)
+	
+	/**
+	 * Method to find the value of G ^ [power] mod P  for DH key exchange.
+	 * @param P
+	 * @param G
+	 * @param power - the power to which G will be raised in the formula
+	 */
 	private static  int calculateValue(int G, int power, int P)  
 	{  
 		int result = 0;
@@ -385,7 +366,6 @@ public class Client
 	 */
 	public static String Encrypt(String message) throws Exception
 	{		
-		//GenerateAESKey();
 		String encryptedData = encrypt(message);
 
 		System.out.println("Message AES-GCM encrypted by " + clientName + ": " + encryptedData);
@@ -393,7 +373,12 @@ public class Client
 		return encryptedData;
 	}
 
-	//AES-GCM encryption
+	/**
+	 * AES-GCM encryption.
+	 * @param data
+	 * @return encrypted data as a string
+	 * @throws Exception
+	 */
 	public static String encrypt(String data) throws Exception 
 	{
 		byte[] dataInBytes = data.getBytes();
@@ -402,7 +387,6 @@ public class Client
 		byte[] encryptedBytes = encryptionCipher.doFinal(dataInBytes);
 		System.out.println("iv: " + encryptionCipher.getIV());
 		System.out.println("key: " + key);
-//		System.out.println("decrypted bs: " + decrypt(encode(encryptedBytes)));
 		return encode(encryptedBytes);
 	}
 
@@ -422,6 +406,12 @@ public class Client
 		return new String(decryptedBytes);
 	}
 
+	/**
+	 * Performs the CCMP encryption.
+	 * @param plaintext - the message to be encrypted
+	 * @param key - the key used for the cipher encryption
+	 * @throws Exception
+	 */
 	public static String CCMP_Encrypt(String plaintext, String key) throws Exception 
 	{
 		// Generate a 256-bit key from the given encryption key
@@ -441,11 +431,17 @@ public class Client
 		byte[] encryptedBytes = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
 		// Encode the encrypted bytes to Base64 string
-		//encode(encryptedBytes);
 		return Base64.getEncoder().encodeToString(encryptedBytes);
 	}
 
-	public static String CCMP_Decrypt(String ciphertext, String key) throws Exception {
+	/**
+	 * Performs the CCMP decryption.
+	 * @param ciphertext - the message to be decrypted
+	 * @param key - the key used for the cipher decryption
+	 * @throws Exception
+	 */
+	public static String CCMP_Decrypt(String ciphertext, String key) throws Exception 
+	{
 		// Generate a 256-bit key from the given decryption key
 		byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
 		MessageDigest sha = MessageDigest.getInstance("SHA-256");
@@ -469,14 +465,9 @@ public class Client
 		//encode(decryptedBytes);
 		return new String(decryptedBytes, StandardCharsets.UTF_8);
 	}
-
-//	public String getMessage()
-//	{
-//		this.newMessage = false;
-//		return encryptedMessage;
-//	}
 	
-	/******************** below are different versions of the same method used to perform the decryptions in different orders ***************************/
+	/******************** Below are different versions of the same method used to perform the decryptions in different orders. The order of decryption is commented on top of each method, 
+	 * where GHC stands for (GCM decryption, followed by HMAC verification, followed by CCMP decryption). Note that the message would have to have been encrypted in the opposite order by the sender. ***************************/
 
 	//GHC
 //	public static void ProcessResponse(String message, String senderName, byte[] hmacSignature, byte[] messageSignature, PublicKey pubKey) throws Exception
@@ -496,7 +487,6 @@ public class Client
 //
 //			decryptedData = decrypt(message);
 //
-//
 //			if(isMessageAuthentic(decryptedData, hmacSignature))
 //			{					
 //				message = CCMP_Decrypt(decryptedData, cipherBlockChainKey);
@@ -508,11 +498,7 @@ public class Client
 //				System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 //				averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 //				System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-//				
 //				System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-//
-////				PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-////				chatScreen.println(senderName + ": " + decryptedData);
 //			}
 //
 //			else
@@ -520,11 +506,6 @@ public class Client
 //				System.out.println("Message discarded!");
 //				decryptedData = "0";
 //			}
-//
-////			if(clientName.equals("Broker"))
-////			{
-////				ProcessCommand(decryptedData, senderName);
-////			}
 //		}
 //		
 //		else
@@ -546,7 +527,6 @@ public class Client
 //		{
 //			System.out.println("Digital signature verified :)");
 //			
-//			
 //			long beforeUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //			long startTime = System.nanoTime();//start timer
 //			decryptedData = decrypt(message);
@@ -554,9 +534,7 @@ public class Client
 //			System.out.println("Decrypted Cipher Block Chain: " + message);
 //
 //			if(isMessageAuthentic(message, hmacSignature))
-//			{				
-//
-//
+//			{	
 //				long stopTime = System.nanoTime();// stop timer
 //				long afterUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //				long actualUsedMemory = afterUsedMemory - beforeUsedMemory;
@@ -564,23 +542,13 @@ public class Client
 //				System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 //				averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 //				System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-//				
 //				System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-//
-////				PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-////				chatScreen.println(senderName + ": " + decryptedData);
-//			}
 //
 //			else
 //			{
 //				System.out.println("Message discarded!");
 //				decryptedData = "0";
 //			}
-//
-////			if(clientName.equals("Broker"))
-////			{
-////				ProcessCommand(decryptedData, senderName);
-////			}
 //		}
 //		
 //		else
@@ -609,10 +577,8 @@ public class Client
 //				System.out.println("Decrypted Cipher Block Chain: " + message);
 //				decryptedData = decrypt(message);
 //
-//
 //				if(isMessageAuthentic(decryptedData, hmacSignature))
-//				{				
-//					
+//				{							
 //					long stopTime = System.nanoTime();// stop timer
 //					long afterUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //					long actualUsedMemory = afterUsedMemory - beforeUsedMemory;
@@ -620,11 +586,7 @@ public class Client
 //					System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 //					averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 //					System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-//					
 //					System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-//
-////					PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-////					chatScreen.println(senderName + ": " + decryptedData);
 //				}
 //
 //				else
@@ -632,11 +594,6 @@ public class Client
 //					System.out.println("Message discarded!");
 //					decryptedData = "0";
 //				}
-//
-////				if(clientName.equals("Broker"))
-////				{
-////					ProcessCommand(decryptedData, senderName);
-////				}
 //			}
 //			
 //			else
@@ -663,8 +620,6 @@ public class Client
 				message = CCMP_Decrypt(message, cipherBlockChainKey);
 				System.out.println("Decrypted Cipher Block Chain: " + message);
 
-
-
 				if(isMessageAuthentic(message, hmacSignature))
 				{	
 					decryptedData = decrypt(message);					
@@ -672,11 +627,7 @@ public class Client
 					System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 					averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 					System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-					
 					System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-
-//					PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-//					chatScreen.println(senderName + ": " + decryptedData);
 				}
 
 				else
@@ -684,11 +635,6 @@ public class Client
 					System.out.println("Message discarded!");
 					decryptedData = "0";
 				}
-
-//				if(clientName.equals("Broker"))
-//				{
-//					ProcessCommand(decryptedData, senderName);
-//				}
 			}
 			
 			else
@@ -726,11 +672,7 @@ public class Client
 //					System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 //					averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 //					System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-//					
 //					System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-//
-////					PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-////					chatScreen.println(senderName + ": " + decryptedData);
 //				}
 //
 //				else
@@ -738,11 +680,6 @@ public class Client
 //					System.out.println("Message discarded!");
 //					decryptedData = "0";
 //				}
-//
-////				if(clientName.equals("Broker"))
-////				{
-////					ProcessCommand(decryptedData, senderName);
-////				}
 //			}
 //			
 //			else
@@ -780,23 +717,13 @@ public class Client
 //				System.out.println("Message decryption time: " + (stopTime - startTime) + "ns");
 //				averageDecryptionTime += (stopTime - startTime) / decryptionCount;
 //				System.out.println("Average message decryption time over " + decryptionCount + " decryptions: " + averageDecryptionTime + "ns");
-//				
 //				System.out.println("Decrypted AES-GCM message by " + clientName + ": " + decryptedData);
-//
-////				PrintWriter chatScreen = new PrintWriter(socket.getOutputStream(), true);
-////				chatScreen.println(senderName + ": " + decryptedData);
-//			}
 //
 //			else
 //			{
 //				System.out.println("Message discarded!");
 //				decryptedData = "0";
 //			}
-//
-////			if(clientName.equals("Broker"))
-////			{
-////				ProcessCommand(decryptedData, senderName);
-////			}
 //		}
 //		
 //		else
@@ -805,7 +732,8 @@ public class Client
 //		}
 //	}
 		
-		/******************** below are different versions of the same method used to perform the encryptions in different orders ***************************/
+		/******************** Below are different versions of the same method used to perform the encryptions in different orders. The order of encryption is commented on top of each method, 
+		 * where GHC stands for (GCM encryption, followed by HMAC verification, followed by CCMP encryption). ***************************/
 
 	//GHC
 	private static String ThreeLayerEncryption(String message) throws InvalidKeyException, NoSuchAlgorithmException, Exception
@@ -842,7 +770,6 @@ public class Client
 //		CCMP_encryptedMessage = CCMP_Encrypt(encryptedMessage, cipherBlockChainKey);//CCMP
 //		HMAC_Sign(CCMP_encryptedMessage);//HMAC
 //
-//		
 //		long stopTime = System.nanoTime();
 //		long afterUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		long actualUsedMemory = afterUsedMemory - beforeUsedMemory;
@@ -862,13 +789,10 @@ public class Client
 //		long beforeUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		long startTime = System.nanoTime();
 //		
-//
 //		CCMP_encryptedMessage = CCMP_Encrypt(message, cipherBlockChainKey);//CCMP
 //		encryptedMessage = Encrypt(CCMP_encryptedMessage);//GCM
 //		HMAC_Sign(encryptedMessage);//HMAC
 //
-//
-//		
 //		long stopTime = System.nanoTime();
 //		long afterUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		long actualUsedMemory = afterUsedMemory - beforeUsedMemory;
@@ -893,7 +817,6 @@ public class Client
 //		HMAC_Sign(CCMP_encryptedMessage);//HMAC
 //		encryptedMessage = Encrypt(CCMP_encryptedMessage);//AES-GCM
 //
-//		
 //		long stopTime = System.nanoTime();
 //		long afterUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		long actualUsedMemory = afterUsedMemory - beforeUsedMemory;
@@ -912,7 +835,6 @@ public class Client
 //		long startTime = System.nanoTime();
 //		long beforeUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		
-//
 //		HMAC_Sign(message);//HMAC
 //		CCMP_encryptedMessage = CCMP_Encrypt(message, cipherBlockChainKey);//CCMP
 //		encryptedMessage = Encrypt(CCMP_encryptedMessage);//AES-GCM
@@ -936,7 +858,6 @@ public class Client
 //		long beforeUsedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 //		long startTime = System.nanoTime();
 //		
-//
 //		HMAC_Sign(message);//HMAC
 //		encryptedMessage = Encrypt(message);//AES-GCM
 //		CCMP_encryptedMessage = CCMP_Encrypt(encryptedMessage, cipherBlockChainKey);//CCMP
@@ -951,6 +872,10 @@ public class Client
 //		return CCMP_encryptedMessage;
 //	}
 
+	/**
+	 * Generates the key used for AES-GCM encryption.
+	 * @throws Exception
+	 */
 	public static void GenerateAESKey() throws Exception 
 	{
 		int keySize = 0;
@@ -987,41 +912,21 @@ public class Client
 		key = new SecretKeySpec(str.getBytes(), "AES");
 	}
 
-	//	public SecretKey getKey()
-	//	{
-	//		return key;
-	//	}
-	//	
-	//	public void setKey(SecretKey aesKey)
-	//	{
-	//		this.key = aesKey;
-	//	}
-	//	
-//	public Cipher getEncryptionCipher()
-//	{
-//		return encryptionCipher;
-//	}
-//
-//	public void setEncryptionCipher(Cipher encryptionCipher)
-//	{
-//		this.encryptionCipher = encryptionCipher;
-//	}
-
-	//turns byte into string and returns the string
+	/**
+	 * Base 64 encodes a byte of data into a string.
+	 * @param data - the byte to be encoded
+	 */
 	private static String encode(byte[] data) 
 	{
 		return Base64.getEncoder().encodeToString(data);
 	}
 
-	//turns string into byte and returns the byte
+	/**
+	 * Base 64 decodes a string of data into a byte.
+	 * @param data - the string to be decoded
+	 */
 	private static byte[] decode(String data) 
 	{
 		return Base64.getDecoder().decode(data);
 	}
-
-//	public void Wait() throws InterruptedException
-//	{
-//		Thread.sleep(1);
-//	}
-
 }

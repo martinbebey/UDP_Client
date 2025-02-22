@@ -462,7 +462,6 @@ public class Client
 		byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
 
 		// Convert the decrypted bytes to plain text
-		//encode(decryptedBytes);
 		return new String(decryptedBytes, StandardCharsets.UTF_8);
 	}
 	

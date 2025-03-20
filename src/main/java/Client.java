@@ -24,7 +24,13 @@ import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
@@ -38,7 +44,6 @@ public class Client
 {
 	private static DatagramSocket socket;
 	private static InetAddress address;
-	private static byte[] buf;
 	private static long averageEncryptionTime;
 	private static long averageDecryptionTime;
 	private static long averageResponseTime;
@@ -113,7 +118,7 @@ public class Client
 		
 		GenerateDigitalSignature();
 		
-		System.out.println("Please press: [1]Login [2]Stock Info [3]Buy [4]Sell \n");
+		System.out.println("Please press: [1]Login [2]Portfolio Info [3]Buy [4]Sell [5]Stock Info \n");
 		
 		while(!stop) 
 		{
@@ -144,22 +149,24 @@ public class Client
 			response = sendMessage(encryptedMessage + "|" + clientName + "|" + str_hmacSignature + "|" + str_messageDS + "|" + str_publicKeyDS + "|" + initializationVector);
 			
 			//breakdown response
-			String encryptedResponse = response.split("\\|")[0];
-			String senderName = response.split("\\|")[1];
-			byte[] userHMACSignature = Base64.getDecoder().decode(response.split("\\|")[2].getBytes());
-			byte[] userDigitalSignature = Base64.getDecoder().decode(response.split("\\|")[3].getBytes());
-			System.out.println("received iv string: " + response.split("\\|")[5].trim());
-			initVector = Base64.getDecoder().decode(response.split("\\|")[5].trim().getBytes());
-			System.out.println(clientName + " received HMAC signature: " + response.split("\\|")[2]);
-			System.out.println(clientName + " received DS signature: " + response.split("\\|")[3]);
-			
-			KeyFactory factory = KeyFactory.getInstance("DSA");
-			String keyString = response.split("\\|")[4].trim();
-			byte[] keyByte = Base64.getDecoder().decode(keyString.trim());
-			PublicKey brokerPublicKeyDS = (PublicKey) factory.generatePublic(new X509EncodedKeySpec(keyByte));
-			
-			//process response
-			ProcessResponse(encryptedResponse, senderName, userHMACSignature, userDigitalSignature, brokerPublicKeyDS);
+			if(response != null && (!response.isEmpty() || response.isBlank())) {
+				String encryptedResponse = response.split("\\|")[0];
+				String senderName = response.split("\\|")[1];
+				byte[] userHMACSignature = Base64.getDecoder().decode(response.split("\\|")[2].getBytes());
+				byte[] userDigitalSignature = Base64.getDecoder().decode(response.split("\\|")[3].getBytes());
+				System.out.println("received iv string: " + response.split("\\|")[5].trim());
+				initVector = Base64.getDecoder().decode(response.split("\\|")[5].trim().getBytes());
+				System.out.println(clientName + " received HMAC signature: " + response.split("\\|")[2]);
+				System.out.println(clientName + " received DS signature: " + response.split("\\|")[3]);
+
+				KeyFactory factory = KeyFactory.getInstance("DSA");
+				String keyString = response.split("\\|")[4].trim();
+				byte[] keyByte = Base64.getDecoder().decode(keyString.trim());
+				PublicKey brokerPublicKeyDS = (PublicKey) factory.generatePublic(new X509EncodedKeySpec(keyByte));
+
+				//process response
+				ProcessResponse(encryptedResponse, senderName, userHMACSignature, userDigitalSignature, brokerPublicKeyDS);
+			}
 		}
 		
 		socket.close();
@@ -177,34 +184,87 @@ public class Client
 	 * @param msg the message to be included in the packet to be sent to the server.
 	 * @return the response from the server.
 	 * @throws IOException
+	 * @throws InterruptedException 
 	 */
-	public static String sendMessage(String msg) throws IOException 
+	public static String sendMessage(String msg) throws IOException, InterruptedException 
 	{
-		buf = msg.getBytes();
-		DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
-		System.out.println("Sending packet of size: " + packet.getLength());
-		averagePacketSentSize += packet.getLength();
-		System.out.println("Average size of packets sent: " + averagePacketSentSize);
-		socket.send(packet);
+//		buf = msg.getBytes();
+//		DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
+//		System.out.println("Sending packet of size: " + packet.getLength());
+//		averagePacketSentSize += packet.getLength();
+//		System.out.println("Average size of packets sent: " + averagePacketSentSize);
+//		socket.send(packet);
+//		
+//		++numberOfMessagesSent;
+//		long startTime = System.nanoTime();
+//		
+//		buf = new byte[5000];
+//		packet = new DatagramPacket(buf, buf.length);
+//		socket.receive(packet);
+//		
+//		long stopTime = System.nanoTime();
+//		System.out.println("Time betwen message and response: " + (stopTime - startTime) + "ns");
+//		averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
+//		System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
+//		
+//		//receiving server response
+//		String received = new String(packet.getData(), 0, packet.getLength());
+//		System.out.println("Receiving packet of size: " + packet.getLength());
+//		averagePacketReceivedSize += packet.getLength();
+//		System.out.println("Average size of packets received: " + averagePacketReceivedSize);
+//		return received;
 		
-		++numberOfMessagesSent;
-		long startTime = System.nanoTime();
-		
-		buf = new byte[5000];
-		packet = new DatagramPacket(buf, buf.length);
-		socket.receive(packet);
-		
-		long stopTime = System.nanoTime();
-		System.out.println("Time betwen message and response: " + (stopTime - startTime) + "ns");
-		averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
-		System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
-		
-		//receiving server response
-		String received = new String(packet.getData(), 0, packet.getLength());
-		System.out.println("Receiving packet of size: " + packet.getLength());
-		averagePacketReceivedSize += packet.getLength();
-		System.out.println("Average size of packets received: " + averagePacketReceivedSize);
-		return received;
+	       	byte[] buf = msg.getBytes();
+	        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
+	        System.out.println("Sending packet of size: " + packet.getLength());
+	        averagePacketSentSize += packet.getLength();
+	        System.out.println("Average size of packets sent: " + averagePacketSentSize);
+	        socket.send(packet);
+	        
+	        ++numberOfMessagesSent;
+	        long startTime = System.nanoTime();
+	        
+	        buf = new byte[5000];
+	        DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
+	        
+	        // Set up a timeout with ExecutorService
+	        ExecutorService executor = Executors.newSingleThreadExecutor();
+	        Future<?> future = executor.submit(() -> {
+	            try {
+	                socket.receive(receivedPacket);
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	            }
+	        });
+	        
+	        try {
+	            // Wait for the response, but time out after 10 seconds
+	            future.get(10, TimeUnit.SECONDS); // Timeout after 10 seconds
+	        } catch (TimeoutException e) {
+	            // Timeout occurred
+	            System.out.println("Timeout: No response after 10 seconds. Please Try again.");
+	            future.cancel(true);  // Cancel the receive task
+	            executor.shutdown();
+	            return null; // Return null or an appropriate message indicating timeout
+	        } catch (Exception e) {
+//	            e.printStackTrace();
+	            return null;
+	        } finally {
+	            executor.shutdown(); // Clean up executor
+	        }
+
+	        long stopTime = System.nanoTime();
+	        System.out.println("Time between message and response: " + (stopTime - startTime) + "ns");
+	        averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
+	        System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
+
+	        // Receiving server response
+	        String received = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
+	        System.out.println("Receiving packet of size: " + receivedPacket.getLength());
+	        averagePacketReceivedSize += receivedPacket.getLength();
+	        System.out.println("Average size of packets received: " + averagePacketReceivedSize);
+
+	        return received;
 	}
 	
 	/**

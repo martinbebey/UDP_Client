@@ -138,6 +138,7 @@ public class Client
 		while(!stop) 
 		{
 			command = input.readLine();
+			
 			//print message from client to console
 			System.out.println("\n" + clientName + " wrote: " + command + "\n");
 
@@ -196,38 +197,34 @@ public class Client
 	}
 	
 	 /**
-     * Writes a string value into a specific cell of an Excel (.xlsx) file.
-     *
-     * @param excelFilePath Full path to the Excel file (e.g. "C:\\Users\\you\\Desktop\\file.xlsx")
-     * @param excelRowIndex      Row number (0-based)
-     * @param excelColumnIndex      Column number (0-based)
-     * @param value         The string to write
+     * Writes a string value into a specific cell of an Excel (.xlsx) file. This is used for data collection.
+     * @param value The string to write into the excel file
      */
 	private static void writeToExcelCell(String value) {
-		if(command.equals("2")) {
-			try (FileInputStream fis = new FileInputStream(excelFilePath);
-					Workbook workbook = new XSSFWorkbook(fis)) {
-
-				Sheet sheet = workbook.getSheetAt(0); // get first sheet
-				Row row = ((org.apache.poi.ss.usermodel.Sheet) sheet).getRow(excelRowIndex);
-				if (row == null) row = sheet.createRow(excelRowIndex);
-
-				Cell cell = row.getCell(excelColumnIndex);
-				if (cell == null) cell = row.createCell(excelColumnIndex);
-
-				cell.setCellValue(value);
-
-				fis.close(); // close input stream before writing
-
-				try (FileOutputStream fos = new FileOutputStream(excelFilePath)) {
-					workbook.write(fos);
-					System.out.println("Value written to Excel: " + value);
-				}
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+//		if(command.equals("2")) {
+//			try (FileInputStream fis = new FileInputStream(excelFilePath);
+//					Workbook workbook = new XSSFWorkbook(fis)) {
+//
+//				Sheet sheet = workbook.getSheetAt(0); // get first sheet
+//				Row row = ((org.apache.poi.ss.usermodel.Sheet) sheet).getRow(excelRowIndex);
+//				if (row == null) row = sheet.createRow(excelRowIndex);
+//
+//				Cell cell = row.getCell(excelColumnIndex);
+//				if (cell == null) cell = row.createCell(excelColumnIndex);
+//
+//				cell.setCellValue(value);
+//
+//				fis.close(); // close input stream before writing
+//
+//				try (FileOutputStream fos = new FileOutputStream(excelFilePath)) {
+//					workbook.write(fos);
+//					System.out.println("Value written to Excel: " + value);
+//				}
+//
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
 	}
 	
 	 /**
@@ -257,100 +254,48 @@ public class Client
 	 * @throws InterruptedException 
 	 */
 	public static String sendMessage(String msg) throws IOException, InterruptedException 
-	{
-//		buf = msg.getBytes();
-//		DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
-//		System.out.println("Sending packet of size: " + packet.getLength());
-//		averagePacketSentSize += packet.getLength();
-//		System.out.println("Average size of packets sent: " + averagePacketSentSize);
-//		socket.send(packet);
-//		
-//		++numberOfMessagesSent;
-//		long startTime = System.nanoTime();
-//		
-//		buf = new byte[5000];
-//		packet = new DatagramPacket(buf, buf.length);
-//		socket.receive(packet);
-//		
-//		long stopTime = System.nanoTime();
-//		System.out.println("Time betwen message and response: " + (stopTime - startTime) + "ns");
-//		averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
-//		System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
-//		
-//		//receiving server response
-//		String received = new String(packet.getData(), 0, packet.getLength());
-//		System.out.println("Receiving packet of size: " + packet.getLength());
-//		averagePacketReceivedSize += packet.getLength();
-//		System.out.println("Average size of packets received: " + averagePacketReceivedSize);
-//		return received;
-		
-	       	byte[] buf = msg.getBytes();
-	        DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
-	        System.out.println("*Sending packet of size: " + packet.getLength());
-	        excelRowIndex = startingRowIndex + 3;
-	        writeToExcelCell(String.valueOf(packet.getLength()));
-	        totalPacketSentSize += packet.getLength();
-	        System.out.println("Cumulative size of packets sent: " + totalPacketSentSize);
-	        socket.send(packet);
-	        socket.setSoTimeout(20000);
-	        
-	        ++numberOfMessagesSent;
-	        long startTime = System.nanoTime();
-	        
-	        buf = new byte[5000];
-	        DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
-	        
-	        // Set up a timeout with ExecutorService
-//	        ExecutorService executor = Executors.newSingleThreadExecutor();
-//	        Future<?> future = executor.submit(() -> {
-//	            try {
-//	                socket.receive(receivedPacket);
-//	            } catch (Exception e) {
-//	                e.printStackTrace();
-//	            }
-//	        });
-//	        
-//	        try {
-//	            // Wait for the response, but time out after 10 seconds
-//	            future.get(20, TimeUnit.SECONDS); // Timeout after 10 seconds
-//	        } catch (TimeoutException e) {
-//	            // Timeout occurred
-//	            System.out.println("Timeout: No response after 20 seconds. Please Try again.");
-//	            future.cancel(true);  // Cancel the receive task
-//	            executor.shutdown();
-//	            return null; // Return null or an appropriate message indicating timeout
-//	        } catch (Exception e) {
-////	            e.printStackTrace();
-//	            return null;
-//	        } finally {
-//	            executor.shutdown(); // Clean up executor
-//	        }
-	        
-	        try 
-	        {
-	        	socket.receive(receivedPacket);
-	        }
-	        catch(Exception exception) 
-	        {
-	        	System.out.println("Timeout: No response after 20 seconds. Please Try again.");
-	        }
+	{		
+		byte[] buf = msg.getBytes();
+		DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 5000);
+		System.out.println("*Sending packet of size: " + packet.getLength());
+		excelRowIndex = startingRowIndex + 3;
+		writeToExcelCell(String.valueOf(packet.getLength()));
+		totalPacketSentSize += packet.getLength();
+		System.out.println("Cumulative size of packets sent: " + totalPacketSentSize);
+		socket.send(packet);
+		socket.setSoTimeout(20000); // Timeout after 20s of waiting for a response from the broker
 
-	        long stopTime = System.nanoTime();
-	        System.out.println("*Time between message and response: " + (stopTime - startTime) + "ns");
-	        excelRowIndex = startingRowIndex + 2;
-	        writeToExcelCell(String.valueOf(stopTime - startTime));
-	        averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
-	        System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
+		++numberOfMessagesSent;
+		long startTime = System.nanoTime();
 
-	        // Receiving server response
-	        String received = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
-	        System.out.println("*Receiving packet of size: " + receivedPacket.getLength());
-	        excelRowIndex = startingRowIndex + 4;
-	        writeToExcelCell(String.valueOf(receivedPacket.getLength()));
-	        totalPacketReceivedSize += receivedPacket.getLength();
-	        System.out.println("Cumulative size of packets received: " + totalPacketReceivedSize);
+		buf = new byte[5000];
+		DatagramPacket receivedPacket = new DatagramPacket(buf, buf.length);
 
-	        return received;
+		try 
+		{
+			socket.receive(receivedPacket);
+		}
+		catch(Exception exception) 
+		{
+			System.out.println("Timeout: No response after 20 seconds. Please Try again.");
+		}
+
+		long stopTime = System.nanoTime();
+		System.out.println("*Time between message and response: " + (stopTime - startTime) + "ns");
+		excelRowIndex = startingRowIndex + 2;
+		writeToExcelCell(String.valueOf(stopTime - startTime));
+		averageResponseTime += (stopTime - startTime) / numberOfMessagesSent;
+		System.out.println("Average message response time over " + numberOfMessagesSent + " messages: " + averageResponseTime + "ns");
+
+		// Receiving server response
+		String received = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
+		System.out.println("*Receiving packet of size: " + receivedPacket.getLength());
+		excelRowIndex = startingRowIndex + 4;
+		writeToExcelCell(String.valueOf(receivedPacket.getLength()));
+		totalPacketReceivedSize += receivedPacket.getLength();
+		System.out.println("Cumulative size of packets received: " + totalPacketReceivedSize);
+
+		return received;
 	}
 	
 	/**
@@ -533,7 +478,7 @@ public class Client
 		byte[] encryptedBytes = encryptionCipher.doFinal(dataInBytes);
 		System.out.println("iv: " + encryptionCipher.getIV());
 		System.out.println("key: " + key);
-		return encode(encryptedBytes);
+		return Base64.getEncoder().encodeToString(encryptedBytes);
 	}
 
 	/**
@@ -544,7 +489,7 @@ public class Client
 	 */
 	public static String decrypt(String encryptedData) throws Exception 
 	{
-		byte[] dataInBytes = decode(encryptedData);
+		byte[] dataInBytes = Base64.getDecoder().decode(encryptedData);
 		Cipher decryptionCipher = Cipher.getInstance("AES/GCM/NoPadding");
 		GCMParameterSpec spec = new GCMParameterSpec(DATA_LENGTH, initVector);
 		decryptionCipher.init(Cipher.DECRYPT_MODE, key, spec);
@@ -1122,23 +1067,5 @@ public class Client
 		str += str;
 		System.out.println("AES key string: " + str);
 		key = new SecretKeySpec(str.getBytes(), "AES");
-	}
-
-	/**
-	 * Base 64 encodes a byte of data into a string.
-	 * @param data - the byte to be encoded
-	 */
-	private static String encode(byte[] data) 
-	{
-		return Base64.getEncoder().encodeToString(data);
-	}
-
-	/**
-	 * Base 64 decodes a string of data into a byte.
-	 * @param data - the string to be decoded
-	 */
-	private static byte[] decode(String data) 
-	{
-		return Base64.getDecoder().decode(data);
 	}
 }

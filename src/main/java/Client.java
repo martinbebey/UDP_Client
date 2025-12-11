@@ -74,7 +74,7 @@ public class Client
 	private static KeyPairGenerator keyPairGen = null; //key pair generator object
 	private static KeyPair pair = null;
 	private static Signature digitalSignature = null;
-	private String BrokerAddress = "192.168.0.17";
+	private String BrokerAddress = "192.168.56.1";
 	private static String command = "";
 	private static String excelFilePath = "C:\\Users\\Public\\Metrics_Client.xlsx";
 	private static int excelRowIndex = 0;
@@ -137,6 +137,7 @@ public class Client
 		
 		while(!stop) 
 		{
+//			System.out.println("Please press: [1]Login [2]Portfolio Info [3]Buy [4]Sell [5]Stock Info \n");
 			command = input.readLine();
 			
 			//print message from client to console
